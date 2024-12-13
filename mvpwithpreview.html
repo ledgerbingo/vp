@@ -178,7 +178,7 @@
                 this.sendToLlama(imageData, transcription)
                     .then(response => {
                         // Handle the Llama model response
-                        this.transcriptionDiv.textContent += '\n\nLlama Response: ' + response;
+                        this.transcriptionDiv.textContent += '\n\nLlama Response: ' + JSON.stringify(response, null, 2);
                     });
             }
 
