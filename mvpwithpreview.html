@@ -194,7 +194,8 @@
                 this.sendToLlama(imageData, transcription)
                     .then(response => {
                         // Handle the Llama model response
-                        this.transcriptionDiv.textContent += '\n\nLlama Response: ' + JSON.stringify(response, null, 2);
+                        const generatedText = response[0]?.generated_text || "No response";
+                        this.transcriptionDiv.textContent += '\n\nLlama Response: ' + generatedText;
                     });
             }
 
