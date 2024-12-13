@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>XR-Inspired Transcription Companion</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #f0f4f8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 20px;
+            width: 100%;
+        }
+        #videoPreview {
+            width: 100%;
+            max-width: 640px;
+            height: 480px;
+            background-color: #000;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        #recordButton {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            font-size: 16px;
+            margin: 20px 0;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        #recordButton.recording {
+            background-color: #f44336;
+            animation: pulse 1s infinite;
+        }
+        #transcription {
+            width: 100%;
+            max-width: 640px;
+            background-color: #e9ecef;
+            border: 2px dashed #3498db;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 8px;
+            min-height: 100px;
+            text-align: center;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <video id="videoPreview" autoplay playsinline></video>
+        <button id="recordButton">Start Recording</button>
+        <div id="transcription">
+            Transcription will appear here...
+        </div>
+    </div>
+
+    <script>
+        class XRInspiredTranscription {
+            constructor() {
+                this.videoPreview = document.getElementById('videoPreview');
+                this.recordButton = document.getElementById('recordButton');
+                this.transcriptionDiv = document.getElementById('transcription');
+                
+                // Speech Recognition Setup
+                this.recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                this.setupSpeechRecognition();
+                
+                // Camera Preview Setup
+                this.setupCameraPreview();
+            }
+
+            async setupCameraPreview() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { 
+                            width: { ideal: 640 },
+                            height: { ideal: 480 }
+                        },
+                        audio: false
+                    });
+                    this.videoPreview.srcObject = stream;
+                } catch (error) {
+                    this.transcriptionDiv.textContent = `Camera Error: ${error.message}`;
+                    this.transcriptionDiv.style.color = '#e74c3c';
+                }
+            }
+
+            setupSpeechRecognition() {
+                this.recognition.continuous = false;
+                this.recognition.interimResults = false;
+                this.recognition.lang = 'en-US';
+
+                this.recognition.onstart = () => {
+                    this.recordButton.textContent = 'Recording...';
+                    this.recordButton.classList.add('recording');
+                };
+
+                this.recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    this.transcriptionDiv.textContent = transcript;
+                    this.transcriptionDiv.style.color = '#2c3e50';
+                };
+
+                this.recognition.onerror = (event) => {
+                    this.transcriptionDiv.textContent = `Error: ${event.error}`;
+                    this.transcriptionDiv.style.color = '#e74c3c';
+                    this.resetButton();
+                };
+
+                this.recognition.onend = () => {
+                    this.resetButton();
+                };
+
+                this.recordButton.onclick = () => this.toggleRecording();
+            }
+
+            toggleRecording() {
+                try {
+                    if (this.recognition.listening) {
+                        this.recognition.stop();
+                    } else {
+                        this.recognition.start();
+                    }
+                } catch (error) {
+                    this.transcriptionDiv.textContent = 'Speech recognition not supported';
+                }
+            }
+
+            resetButton() {
+                this.recordButton.textContent = 'Start Recording';
+                this.recordButton.classList.remove('recording');
+                this.recognition.listening = false;
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+                alert('Your browser does not support speech recognition. Try Chrome or Edge.');
+                return;
+            }
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Your browser does not support camera access.');
+                return;
+            }
+            new XRInspiredTranscription();
+        });
+    </script>
+</body>
+</html>
