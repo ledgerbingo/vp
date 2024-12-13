@@ -38,7 +38,7 @@
             border-radius: 10px;
             object-fit: cover;
         }
-        #recordButton {
+        #recordButton, #askButton {
             background-color: #4CAF50;
             border: none;
             color: white;
@@ -79,6 +79,7 @@
             <canvas id="capturedImage" style="display:none;"></canvas>
         </div>
         <button id="recordButton">Start Recording</button>
+        <button id="askButton">Ask</button>
         <div id="transcription">
             Transcription will appear here...
         </div>
@@ -90,6 +91,7 @@
                 this.videoPreview = document.getElementById('videoPreview');
                 this.capturedImage = document.getElementById('capturedImage');
                 this.recordButton = document.getElementById('recordButton');
+                this.askButton = document.getElementById('askButton');
                 this.transcriptionDiv = document.getElementById('transcription');
                 
                 // Speech Recognition Setup
@@ -101,6 +103,7 @@
                 // Initialize components
                 this.setupCameraPreview();
                 this.setupSpeechRecognition();
+                this.setupAskButton();
             }
 
             async setupCameraPreview() {
@@ -148,6 +151,10 @@
                 this.recordButton.onclick = () => this.toggleRecording();
             }
 
+            setupAskButton() {
+                this.askButton.onclick = () => this.askLlama();
+            }
+
             captureImage() {
                 try {
                     const ctx = this.capturedImage.getContext('2d');
@@ -158,20 +165,21 @@
                         this.capturedImage.height
                     );
                     this.capturedImage.style.display = 'block';
-                    
-                    // Get image data as base64
-                    const imageData = this.capturedImage.toDataURL('image/jpeg');
-                    const transcription = this.transcriptionDiv.textContent;
-                    
-                    // Send to Llama
-                    this.sendToLlama(imageData, transcription)
-                        .then(response => {
-                            // Handle the Llama model response
-                            this.transcriptionDiv.textContent += '\n\nLlama Response: ' + response;
-                        });
                 } catch (error) {
                     this.handleError(`Image Capture Error: ${error.message}`);
                 }
+            }
+
+            async askLlama() {
+                const imageData = this.capturedImage.toDataURL('image/jpeg');
+                const transcription = this.transcriptionDiv.textContent || "Temporary transcription data";
+                
+                // Send to Llama
+                this.sendToLlama(imageData, transcription)
+                    .then(response => {
+                        // Handle the Llama model response
+                        this.transcriptionDiv.textContent += '\n\nLlama Response: ' + response;
+                    });
             }
 
             async sendToLlama(imageData, transcription) {
