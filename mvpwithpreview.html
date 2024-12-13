@@ -183,7 +183,7 @@
             }
 
             async sendToLlama(imageData, transcription) {
-                const HF_TOKEN = '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'; // Replace with your actual token
+                const HF_TOKEN = 'your-actual-hugging-face-token'; // Replace with your actual token
                 
                 try {
                     const response = await fetch(
@@ -199,8 +199,20 @@
                             }),
                         }
                     );
-                    const result = await response.json();
-                    return result;
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                    }
+
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.indexOf("application/json") !== -1) {
+                        const result = await response.json();
+                        return result;
+                    } else {
+                        const text = await response.text();
+                        throw new Error(`Unexpected response format: ${text}`);
+                    }
                 } catch (error) {
                     this.handleError(`Llama API Error: ${error.message}`);
                 }
