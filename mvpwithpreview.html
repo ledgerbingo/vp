@@ -165,13 +165,29 @@
                         this.capturedImage.height
                     );
                     this.capturedImage.style.display = 'block';
+                    
+                    // Resize the image
+                    this.resizeImage(this.capturedImage, 320, 240).then(resizedImageData => {
+                        this.capturedImageData = resizedImageData;
+                    });
                 } catch (error) {
                     this.handleError(`Image Capture Error: ${error.message}`);
                 }
             }
 
+            resizeImage(image, width, height) {
+                return new Promise((resolve) => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(image, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg'));
+                });
+            }
+
             async askLlama() {
-                const imageData = this.capturedImage.toDataURL('image/jpeg');
+                const imageData = this.capturedImageData || this.capturedImage.toDataURL('image/jpeg');
                 const transcription = this.transcriptionDiv.textContent || "Temporary transcription data";
                 
                 // Send to Llama
