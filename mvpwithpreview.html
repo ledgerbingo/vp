@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>XR-Inspired Transcription Companion</title>
+    <title>Contextual Transcription Companion</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -24,13 +24,19 @@
             padding: 20px;
             width: 100%;
         }
-        #videoPreview {
+        .media-container {
+            display: flex;
+            justify-content: space-between;
             width: 100%;
+            gap: 20px;
+        }
+        #videoPreview, #capturedImage {
+            width: 48%;
             max-width: 640px;
             height: 480px;
             background-color: #000;
             border-radius: 10px;
-            margin-bottom: 20px;
+            object-fit: cover;
         }
         #recordButton {
             background-color: #4CAF50;
@@ -68,7 +74,10 @@
 </head>
 <body>
     <div class="container">
-        <video id="videoPreview" autoplay playsinline></video>
+        <div class="media-container">
+            <video id="videoPreview" autoplay playsinline></video>
+            <canvas id="capturedImage" style="display:none;"></canvas>
+        </div>
         <button id="recordButton">Start Recording</button>
         <div id="transcription">
             Transcription will appear here...
@@ -76,33 +85,36 @@
     </div>
 
     <script>
-        class XRInspiredTranscription {
+        class ContextualTranscription {
             constructor() {
                 this.videoPreview = document.getElementById('videoPreview');
+                this.capturedImage = document.getElementById('capturedImage');
                 this.recordButton = document.getElementById('recordButton');
                 this.transcriptionDiv = document.getElementById('transcription');
                 
                 // Speech Recognition Setup
                 this.recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-                this.setupSpeechRecognition();
                 
-                // Camera Preview Setup
+                // Stream and capture variables
+                this.mediaStream = null;
+                
+                // Initialize components
                 this.setupCameraPreview();
+                this.setupSpeechRecognition();
             }
 
             async setupCameraPreview() {
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({
+                    this.mediaStream = await navigator.mediaDevices.getUserMedia({
                         video: { 
                             width: { ideal: 640 },
                             height: { ideal: 480 }
                         },
                         audio: false
                     });
-                    this.videoPreview.srcObject = stream;
+                    this.videoPreview.srcObject = this.mediaStream;
                 } catch (error) {
-                    this.transcriptionDiv.textContent = `Camera Error: ${error.message}`;
-                    this.transcriptionDiv.style.color = '#e74c3c';
+                    this.handleError(`Camera Error: ${error.message}`);
                 }
             }
 
@@ -120,12 +132,13 @@
                     const transcript = event.results[0][0].transcript;
                     this.transcriptionDiv.textContent = transcript;
                     this.transcriptionDiv.style.color = '#2c3e50';
+                    
+                    // Capture image after successful transcription
+                    this.captureImage();
                 };
 
                 this.recognition.onerror = (event) => {
-                    this.transcriptionDiv.textContent = `Error: ${event.error}`;
-                    this.transcriptionDiv.style.color = '#e74c3c';
-                    this.resetButton();
+                    this.handleError(`Error: ${event.error}`);
                 };
 
                 this.recognition.onend = () => {
@@ -133,6 +146,28 @@
                 };
 
                 this.recordButton.onclick = () => this.toggleRecording();
+            }
+
+            captureImage() {
+                try {
+                    // Create canvas context
+                    const ctx = this.capturedImage.getContext('2d');
+                    
+                    // Match canvas to video dimensions
+                    this.capturedImage.width = this.videoPreview.videoWidth;
+                    this.capturedImage.height = this.videoPreview.videoHeight;
+                    
+                    // Draw current video frame
+                    ctx.drawImage(this.videoPreview, 0, 0, 
+                        this.capturedImage.width, 
+                        this.capturedImage.height
+                    );
+                    
+                    // Make canvas visible
+                    this.capturedImage.style.display = 'block';
+                } catch (error) {
+                    this.handleError(`Image Capture Error: ${error.message}`);
+                }
             }
 
             toggleRecording() {
@@ -143,8 +178,14 @@
                         this.recognition.start();
                     }
                 } catch (error) {
-                    this.transcriptionDiv.textContent = 'Speech recognition not supported';
+                    this.handleError('Speech recognition not supported');
                 }
+            }
+
+            handleError(message) {
+                this.transcriptionDiv.textContent = message;
+                this.transcriptionDiv.style.color = '#e74c3c';
+                this.resetButton();
             }
 
             resetButton() {
@@ -164,7 +205,7 @@
                 alert('Your browser does not support camera access.');
                 return;
             }
-            new XRInspiredTranscription();
+            new ContextualTranscription();
         });
     </script>
 </body>
