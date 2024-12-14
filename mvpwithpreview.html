@@ -212,17 +212,16 @@
 
             async sendToLlama(imageData, messages) {
                 const HF_TOKEN = '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'; // Replace with your actual token
-                
-                // Reduce the size of the image data
-                const compressedImageData = imageData.split(',')[1].substring(0, 1000); // Example: truncate the base64 string
-
-                // Create the input string
-                const inputString = JSON.stringify({
-                    image: compressedImageData,
-                    text: messages
-                });
 
                 try {
+                    // Create the request body
+                    const requestBody = JSON.stringify({
+                        inputs: {
+                            image: imageData.split(',')[1], // Use the complete base64 image data without the prefix
+                            text: messages
+                        }
+                    });
+
                     const response = await fetch(
                         "https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-11B-Vision-Instruct",
                         {
@@ -231,9 +230,7 @@
                                 'Content-Type': 'application/json'
                             },
                             method: "POST",
-                            body: JSON.stringify({
-                                inputs: inputString // Combine text and image data into a single string
-                            }),
+                            body: requestBody
                         }
                     );
 
