@@ -195,14 +195,14 @@
                     {
                         role: "user",
                         content: [
-                            { type: "image" },
+                            { type: "image", data: imageData.split(',')[1] }, // Use the complete base64 image data without the prefix
                             { type: "text", text: transcription }
                         ]
                     }
                 ];
                 
                 // Send to Llama
-                this.sendToLlama(imageData, messages)
+                this.sendToLlama(messages)
                     .then(response => {
                         // Handle the Llama model response
                         const generatedText = response[0]?.generated_text || "No response";
@@ -210,16 +210,13 @@
                     });
             }
 
-            async sendToLlama(imageData, messages) {
-                const HF_TOKEN = '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'; // Replace with your actual token
+            async sendToLlama(messages) {
+                const HF_TOKEN = 'your-actual-hugging-face-token'; // Replace with your actual token
 
                 try {
                     // Create the request body
                     const requestBody = JSON.stringify({
-                        inputs: {
-                            image: imageData.split(',')[1], // Use the complete base64 image data without the prefix
-                            text: messages
-                        }
+                        inputs: messages
                     });
 
                     const response = await fetch(
