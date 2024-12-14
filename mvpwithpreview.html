@@ -86,6 +86,62 @@
     </div>
 
     <script>
+        class LlamaVisionProcessor {
+            constructor(apiKey) {
+                this.apiKey = apiKey;
+                this.baseURL = 'https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-11B-Vision-Instruct';
+            }
+
+            async processImage(imageBase64, prompt) {
+                const requestPayload = {
+                    inputs: {
+                        image: imageBase64.split(',')[1], // Use the complete base64 image data without the prefix
+                        text: prompt
+                    }
+                };
+
+                try {
+                    const response = await this.sendRequest(requestPayload);
+                    return this.processResponse(response);
+                } catch (error) {
+                    return this.handleErrorWithIntelligentFallback(error);
+                }
+            }
+
+            async sendRequest(payload) {
+                const response = await fetch(this.baseURL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${this.apiKey}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                }
+
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    return await response.json();
+                } else {
+                    const text = await response.text();
+                    throw new Error(`Unexpected response format: ${text}`);
+                }
+            }
+
+            processResponse(response) {
+                return response[0]?.generated_text || "No response";
+            }
+
+            handleErrorWithIntelligentFallback(error) {
+                console.error('Llama Vision Processor Error:', error);
+                return "An error occurred while processing the image.";
+            }
+        }
+
         class ContextualTranscription {
             constructor() {
                 this.videoPreview = document.getElementById('videoPreview');
@@ -191,7 +247,7 @@
                 const transcription = this.transcriptionDiv.textContent || "Temporary transcription data";
                 
                 // Create the prompt
-                const messages = [
+                const prompt = [
                     {
                         role: "user",
                         content: [
@@ -201,64 +257,12 @@
                     }
                 ];
                 
-                // Send to Llama
-                this.sendToLlama(messages)
-                    .then(response => {
-                        // Handle the Llama model response
-                        const generatedText = response[0]?.generated_text || "No response";
-                        this.transcriptionDiv.textContent += '\n\nLlama Response: ' + generatedText;
-                    });
-            }
-
-            async sendToLlama(messages) {
-                const HF_TOKEN = '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'; // Replace with your actual token
-
-                try {
-                    // Create the request body
-                    const requestBody = JSON.stringify({
-                        inputs: messages
-                    });
-
-                    const response = await fetch(
-                        "https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-11B-Vision-Instruct",
-                        {
-                            headers: {
-                                Authorization: `Bearer ${HF_TOKEN}`,
-                                'Content-Type': 'application/json'
-                            },
-                            method: "POST",
-                            body: requestBody
-                        }
-                    );
-
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-                    }
-
-                    const contentType = response.headers.get("content-type");
-                    if (contentType && contentType.indexOf("application/json") !== -1) {
-                        const result = await response.json();
-                        return result;
-                    } else {
-                        const text = await response.text();
-                        throw new Error(`Unexpected response format: ${text}`);
-                    }
-                } catch (error) {
-                    this.handleError(`Llama API Error: ${error.message}`);
-                }
-            }
-
-            toggleRecording() {
-                try {
-                    if (this.recognition.listening) {
-                        this.recognition.stop();
-                    } else {
-                        this.recognition.start();
-                    }
-                } catch (error) {
-                    this.handleError('Speech recognition not supported');
-                }
+                // Process the image and prompt
+                const llamaProcessor = new LlamaVisionProcessor('your-actual-hugging-face-token'); // Replace with your actual token
+                const response = await llamaProcessor.processImage(imageData, prompt);
+                
+                // Handle the Llama model response
+                this.transcriptionDiv.textContent += '\n\nLlama Response: ' + response;
             }
 
             handleError(message) {
@@ -271,6 +275,18 @@
                 this.recordButton.textContent = 'Start Recording';
                 this.recordButton.classList.remove('recording');
                 this.recognition.listening = false;
+            }
+
+            toggleRecording() {
+                try {
+                    if (this.recognition.listening) {
+                        this.recognition.stop();
+                    } else {
+                        this.recognition.start();
+                    }
+                } catch (error) {
+                    this.handleError('Speech recognition not supported');
+                }
             }
         }
 
