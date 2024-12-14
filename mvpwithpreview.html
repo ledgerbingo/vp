@@ -216,6 +216,12 @@
                 // Reduce the size of the image data
                 const compressedImageData = imageData.split(',')[1].substring(0, 1000); // Example: truncate the base64 string
 
+                // Create the input string
+                const inputString = JSON.stringify({
+                    image: compressedImageData,
+                    text: messages
+                });
+
                 try {
                     const response = await fetch(
                         "https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-11B-Vision-Instruct",
@@ -226,10 +232,7 @@
                             },
                             method: "POST",
                             body: JSON.stringify({
-                                inputs: {
-                                    image: compressedImageData,
-                                    text: JSON.stringify(messages)
-                                }
+                                inputs: inputString // Combine text and image data into a single string
                             }),
                         }
                     );
