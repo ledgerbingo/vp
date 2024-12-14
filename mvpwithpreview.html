@@ -86,22 +86,21 @@
     </div>
 
     <script>
+        import { HfInference } from '@huggingface/inference';
+
         class LlamaVisionProcessor {
             constructor(apiKey) {
-                this.apiKey = apiKey;
-                this.baseURL = 'https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-11B-Vision-Instruct';
+                this.hf = new HfInference(apiKey);
             }
 
-            async processImage(imageBase64, prompt) {
-                const requestPayload = {
-                    inputs: {
-                        image: imageBase64.split(',')[1], // Use the complete base64 image data without the prefix
-                        text: prompt
-                    }
-                };
-
+            async processImage(imageFile, textInput) {
                 try {
-                    const response = await this.sendRequest(requestPayload);
+                    const imageData = await imageFile.arrayBuffer();
+                    const response = await this.hf.imageToText({
+                        data: new Blob([imageData]),
+                        inputs: textInput,
+                        model: 'meta-llama/Llama-3.2-11B-Vision-Instruct',
+                    });
                     return this.processResponse(response);
                 } catch (error) {
                     console.error('Error processing image:', error);
@@ -109,32 +108,8 @@
                 }
             }
 
-            async sendRequest(payload) {
-                const response = await fetch(this.baseURL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${this.apiKey}`
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-                }
-
-                const contentType = response.headers.get("content-type");
-                if (contentType && contentType.indexOf("application/json") !== -1) {
-                    return await response.json();
-                } else {
-                    const text = await response.text();
-                    throw new Error(`Unexpected response format: ${text}`);
-                }
-            }
-
             processResponse(response) {
-                return response[0]?.generated_text || "No response";
+                return response.generated_text || "No response";
             }
 
             handleErrorWithIntelligentFallback(error) {
@@ -247,20 +222,19 @@
                 const imageData = this.capturedImageData || this.capturedImage.toDataURL('image/jpeg');
                 const transcription = this.transcriptionDiv.textContent || "Temporary transcription data";
                 
-                // Create the prompt
-                const prompt = [
-                    {
-                        role: "user",
-                        content: [
-                            { type: "image", data: imageData.split(',')[1] }, // Use the complete base64 image data without the prefix
-                            { type: "text", text: transcription }
-                        ]
-                    }
-                ];
+                // Convert base64 image data to a Blob
+                const byteString = atob(imageData.split(',')[1]);
+                const mimeString = imageData.split(',')[0].split(':')[1].split(';')[0];
+                const ab = new ArrayBuffer(byteString.length);
+                const ia = new Uint8Array(ab);
+                for (let i = 0; i < byteString.length; i++) {
+                    ia[i] = byteString.charCodeAt(i);
+                }
+                const imageFile = new Blob([ab], { type: mimeString });
                 
                 // Process the image and prompt
                 const llamaProcessor = new LlamaVisionProcessor('your-actual-hugging-face-token'); // Replace with your actual token
-                const response = await llamaProcessor.processImage(imageData, prompt);
+                const response = await llamaProcessor.processImage(imageFile, transcription);
                 
                 // Handle the Llama model response
                 this.transcriptionDiv.textContent += '\n\nLlama Response: ' + response;
