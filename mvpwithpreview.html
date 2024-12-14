@@ -104,6 +104,7 @@
                     const response = await this.sendRequest(requestPayload);
                     return this.processResponse(response);
                 } catch (error) {
+                    console.error('Error processing image:', error);
                     return this.handleErrorWithIntelligentFallback(error);
                 }
             }
