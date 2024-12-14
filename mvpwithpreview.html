@@ -190,8 +190,19 @@
                 const imageData = this.capturedImageData || this.capturedImage.toDataURL('image/jpeg');
                 const transcription = this.transcriptionDiv.textContent || "Temporary transcription data";
                 
+                // Create the prompt
+                const messages = [
+                    {
+                        role: "user",
+                        content: [
+                            { type: "image" },
+                            { type: "text", text: transcription }
+                        ]
+                    }
+                ];
+                
                 // Send to Llama
-                this.sendToLlama(imageData, transcription)
+                this.sendToLlama(imageData, messages)
                     .then(response => {
                         // Handle the Llama model response
                         const generatedText = response[0]?.generated_text || "No response";
@@ -199,14 +210,11 @@
                     });
             }
 
-            async sendToLlama(imageData, transcription) {
+            async sendToLlama(imageData, messages) {
                 const HF_TOKEN = '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'; // Replace with your actual token
                 
                 // Reduce the size of the image data
                 const compressedImageData = imageData.split(',')[1].substring(0, 1000); // Example: truncate the base64 string
-
-                // Truncate the transcription text
-                const truncatedTranscription = transcription.substring(0, 1000); // Example: limit to 1000 characters
 
                 try {
                     const response = await fetch(
@@ -218,7 +226,10 @@
                             },
                             method: "POST",
                             body: JSON.stringify({
-                                inputs: `${truncatedTranscription} [IMAGE] ${compressedImageData}` // Combine text and image data into a single string
+                                inputs: {
+                                    image: compressedImageData,
+                                    text: JSON.stringify(messages)
+                                }
                             }),
                         }
                     );
